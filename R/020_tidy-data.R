@@ -7,219 +7,305 @@ ADAMS1AN_R <- readRDS(here::here(RDS_path, "010_ADAMS1AN_R.RDS"))
 ADAMS1TRK_R <- readRDS(here::here(RDS_path, "010_ADAMS1TRK_R.RDS"))
 ADAMS1AD_R <- readRDS(here::here(RDS_path,  "010_ADAMS1AD_R.RDS"))
 
-# https://github.com/rnj0nes/HCAP22-CFA-HCAP/blob/main/-110-create-variables.do
-# Pull variables to import from here
+## Obtain variables for analysis
 
-# Cognition variables
 
+ModelVars <- ADAMS1AN_R %>% 
+  dplyr::select(ADAMSSID, # ID
+                # Orientation items
+                ANMSE1:ANMSE10, # Orientation
+                # Memory items
+                ANRECYES, # 10-word delayed recall (CERAD)
+                ANRECNO,
+                ANMSE13:ANMSE15, # 3-word delayed recall (sum for analysis)
+                ANWM2A, # Logical memory delayed A
+                ANWM2B, # Logical memory delayed B
+                ANDCPTOT, # Const. Praxis delayed
+                ANRCPTOT, #10-word delayed recog
+                # Exec. Func items
+                ANTMASEC, # trails A
+                ANTMBSEC, # trails B
+                ANMSE12, # backwards spelling
+                ANDSSBT, # digit span backwards
+                ANDSSFT, # digit span forwards
+                ANSDMTOT, # symbol digit modality
+                # Language/Fluency items
+                ANAFTOT, # Animal naming
+                ANSCISOR, # name two objects (TICS)
+                ANCACTUS,
+                ANMSE16, # name two objects (MMSE)
+                ANMSE17,
+                ANMSE21, # write a sentence
+                ANMSE20F, # read and follow command
+                ANMSE20L,
+                ANMSE20R,
+                ANBNTTOT, # boston naming test
+                ANCOWATO, # controlled oral word assoc.
+                # Visuospatial items
+                ANCPTOT
+                ) %>% 
+  dplyr::mutate(ANMSE16_R = dplyr::case_when(ANMSE16 == 2 ~ 1, # Recode Vars that need it
+                                             ANMSE16 == 1 ~ 1,
+                                             ANMSE16 == 0 ~ 0),
+                ANMSE17_R = dplyr::case_when(ANMSE17 == 2 ~ 1,
+                                             ANMSE17 == 1 ~ 1,
+                                             ANMSE17 == 0 ~ 0),
+                ANMSE21_R = dplyr::case_when(ANMSE21 == 2 ~ 1,
+                                             ANMSE21 == 1 ~ 1,
+                                             ANMSE21 == 0 ~ 0)) %>% 
+  dplyr::select(-ANMSE16, -ANMSE17, -ANMSE21) %>% 
+  dplyr::mutate(across(c(ANMSE1:ANMSE15, ANMSE12, ANMSE20F, ANMSE20R, ANMSE20L,
+                         ANSCISOR, ANCACTUS, ANRECYES, ANRECNO, ANWM2A,
+                         ANWM2B, ANDCPTOT, ANRCPTOT, ANDSSBT,
+                         ANDSSFT, ANSDMTOT, ANAFTOT,
+                         ANBNTTOT, ANCOWATO, ANCPTOT), na_if, 97), # mark 97s as missing
+                across(c(ANSCISOR, ANCACTUS), na_if, 98), # mark 98s as missing
+                across(c(ANSCISOR, ANCACTUS), na_if, 99), # mark 99s as missing
+                across(c(ANTMBSEC, ANTMASEC), na_if, 995), # mark 995-997 as missing (trails A/B)
+                across(c(ANTMBSEC, ANTMASEC), na_if, 996),
+                across(c(ANTMBSEC, ANTMASEC), na_if, 997)) 
+
+## Examine raw variables
+
+ModelVars %>%
+  dplyr::select(-ADAMSSID) %>%
+  gtsummary::tbl_summary(
+    statistic = list(
+    c(ANRECYES, ANRECNO, ANWM2A, ANWM2B, ANDCPTOT, ANTMBSEC, ANTMASEC,
+      ANDSSBT, ANDSSFT, ANSDMTOT, ANAFTOT, ANBNTTOT, ANCOWATO, ANCPTOT) ~ "{mean} ({sd})")) %>%
+  gtsummary::as_gt() %>%
+  gt::gtsave("HCAP-ADAMS-MODELVARS.rtf")
+
+
+## Make variables to be used in analaysis
+## Pull from this document https://github.com/rnj0nes/HCAP22/blob/main/CFA-HCAP/NEW-CFA-HCAP_a4.pdf
+
+####
 ## ORIENTATION
+####
 
-cognition_1 <- ADAMS1AN_R %>% 
-  dplyr::select(ADAMSSID, ANMSE1:ANMSE10) %>%              # MMSE items 0-10, all (0-1)
-  dplyr::mutate(across(c(ANMSE1:ANMSE10), na_if, 97)) %>%  # mark 97s as missing
+vdori1 <- ModelVars %>% 
+    dplyr::select(ADAMSSID, ANMSE1:ANMSE10) %>%  # MMSE items 0-10, all (0-1)
+    dplyr::rowwise() %>%
+    dplyr::mutate(vdori1 = sum(c_across(ANMSE1:ANMSE10))) %>%  # create vdori1
+    dplyr::select(ADAMSSID, vdori1)
+
+# vdori1 is a direct match to Jones et al. 
+
+####
+## MEMORY
+####
+
+vdmre1 <- ModelVars %>% 
+  dplyr::select(ADAMSSID, ANRECYES, ANRECNO) %>% 
   dplyr::rowwise() %>% 
-  dplyr::mutate(vdori1 = sum(c_across(ANMSE1:ANMSE10))) %>%  # create vdori1
-  dplyr::select(ADAMSSID, vdori1)
-#  0    1    2    3    4    5    6    7    8    9   10 <NA> 
-# 21   17   35   31   28   30   53   49   83  142  323   44 
-
-cognition_2 <- ADAMS1AN_R %>% 
-  dplyr::select(ADAMSSID, ANPRES) %>%       # TICS name of president (0-1)
-  dplyr::mutate(ANPRES = na_if(ANPRES, 97), # mark 97-99 as missing
-                ANPRES = na_if(ANPRES, 98),
-                ANPRES = na_if(ANPRES, 99),
-                vdori2 = ANPRES) %>% 
-  dplyr::select(ADAMSSID, vdori2)
-  
-orientation <- cognition_1 %>% 
-  left_join(cognition_2, by = "ADAMSSID")
-
-## MEMORY: IMMEDIATE EPISODIC
-
-cognition_3 <- ADAMS1AN_R %>% 
-  dplyr::select(ADAMSSID, ANIMMCR1, ANIMMCR2, ANIMMCR3) %>% # immediate word list recall trials 1-3, all (0-10) ###### DIFFERENT FROM HCAP
-  dplyr::rowwise() %>% 
-  dplyr::mutate(across(c(ANIMMCR1:ANIMMCR3), na_if, 97), # mark 97-99 as missing
-                across(c(ANIMMCR1:ANIMMCR3), na_if, 98),
-                across(c(ANIMMCR1:ANIMMCR3), na_if, 99),
-                vdmie1 = sum(c_across(ANIMMCR1:ANIMMCR3))) %>% 
-  dplyr::select(ADAMSSID, vdmie1)
-
-cognition_4 <- ADAMS1AN_R %>% 
-  dplyr::select(ADAMSSID, ANMSE11S) %>%              # MMSE item 11 score (0-3)
-  dplyr::mutate(ANMSE11S = na_if(ANMSE11S, 97)) %>%  # mark 97 as missing
-  dplyr::rename(vdmie2 = ANMSE11S)
-
-cognition_5 <- ADAMS1AN_R %>%  
-  dplyr::select(ADAMSSID, ANIMMCR1) %>%         # immediate word list recall trial 1 (0-10)                    ###### DIFFERENT FROM HCAP
-  dplyr::mutate(ANIMMCR1 = na_if(ANIMMCR1, 97), # mark 97-99 as missing
-                ANIMMCR1 = na_if(ANIMMCR1, 98),
-                ANIMMCR1 = na_if(ANIMMCR1, 99),
-                vdmie3 = ANIMMCR1) %>% 
-  dplyr::select(ADAMSSID, vdmie3)
-
-########
-## vdmie4 IS BASED ON THE BRAVE MAN STORY, UNSURE WHICH TO USE IN ADAMS
-########
-
-## MEMORY: DELAYED EPISODIC
-
-cognition_7 <- ADAMS1AN_R %>% 
-  dplyr::select(ADAMSSID, ANDELCOR) %>%          # delayed word list recall (0-10)
-  dplyr::mutate(ANDELCOR = na_if(ANDELCOR, 97),  # mark 97 as missing
-                vdmde1 = ANDELCOR) %>% 
-  dplyr::select(ADAMSSID, vdmde1)
-
-cognition_8 <- ADAMS1AN_R %>% 
-  dplyr::select(ADAMSSID, ANWM2TOT) %>%          # Weschler Log Mem II for stories (0-37)  ###### DIFFERENT FROM HCAP
-  dplyr::mutate(ANWM2TOT = na_if(ANWM2TOT, 97),  # mark 97 as missing
-                vdmde2 = ANWM2TOT) %>% 
-  dplyr::select(ADAMSSID, vdmde2)
-
-cognition_9 <- ADAMS1AN_R %>% 
-  dplyr::select(ADAMSSID, ANMSE13) %>%          # MMSE Item 13 (0-1)                       ###### DIFFERENT FROM HCAP
-  dplyr::mutate(ANMSE13 = na_if(ANMSE13, 97),  # mark 97 as missing
-                vdmde3 = ANMSE13) %>% 
-  dplyr::select(ADAMSSID, vdmde3)
-
-cognition_10 <- ADAMS1AN_R %>% 
-  dplyr::select(ADAMSSID, ANDCPTOT) %>%          # Delayed Constructional PRAXIS Total (0-11)                   
-  dplyr::mutate(ANDCPTOT = na_if(ANDCPTOT, 97),  # mark 97 as missing
-                vdmde4 = ANDCPTOT) %>% 
-  dplyr::select(ADAMSSID, vdmde4)
-
-########
-## vdmie5 IS BASED ON THE BRAVE MAN STORY, UNSURE WHICH TO USE IN ADAMS
-########
-
-## MEMORY: RECOGNITION
-
-cognition_12 <- ADAMS1AN_R %>% 
-  dplyr::select(ADAMSSID, ANRECYES, ANRECNO) %>%  # sum of word list recognition, yes and no (0-20)
-  dplyr::rowwise() %>% 
-  dplyr::mutate(across(c(ANRECYES, ANRECNO), na_if, 97), # mark 97 as missing
-                vdmre1 = sum(c_across(ANRECYES:ANRECNO))) %>% 
+  dplyr::mutate(vdmre1 = sum(c_across(ANRECYES:ANRECNO))) %>% # create vdmre1 by summing
   dplyr::select(ADAMSSID, vdmre1)
 
-# UNSURE WHAT TO USE FOR VDMRE2 - LOGICAL MEMORY RECOGNITION
+# vdmre1 is a direct match to Jones et al.
 
-## VISUOSPATIAL
+vdmie2 <- ModelVars %>% 
+  dplyr::select(ADAMSSID, ANMSE13:ANMSE15) %>% 
+  dplyr::rowwise() %>%
+  dplyr::mutate(vdmie2 = sum(c_across(ANMSE13:ANMSE15))) %>%  # create vdmie2 by summing
+  dplyr::select(ADAMSSID, vdmie2)
 
-cognition_14 <- ADAMS1AN_R %>% 
-  dplyr::select(ADAMSSID, ANCPTOT) %>%  # constructional praxis immediate (0-11)
-  dplyr::mutate(ANCPTOT = na_if(ANCPTOT, 97),  # mark 97 as missing
-                vdvis1 = ANCPTOT) %>% 
-  dplyr::select(ADAMSSID, vdvis1)
+# vdmie2 is a direct match to Jones et al.
 
-cognition_15 <- ADAMS1AN_R %>% 
-  dplyr::select(ADAMSSID, ANMSE22) %>%  # MMSE ITEM 22
-  dplyr::mutate(ANMSE22 = na_if(ANMSE22, 97),  # mark 97 as missing
-                vdvis2 = ANMSE22) %>% 
-  dplyr::select(ADAMSSID, vdvis2)
+vdmde4 <- ModelVars %>% 
+  dplyr::select(ADAMSSID, ANDCPTOT) %>% 
+  dplyr::rename(vdmde4 = ANDCPTOT) # rename ANDCPTOT to vdmde4
 
-visuospatial <- cognition_14 %>% 
-  left_join(cognition_15, by = "ADAMSSID")
+# vdmre1 is a direct match to Jones et al.
 
-## EXECUTIVE FUNCTION
+vdmde8 <- ModelVars %>% 
+  dplyr::select(ADAMSSID, ANRCPTOT) %>% 
+  dplyr::rename(vdmde8 = ANRCPTOT) # rename ANRCPTOT to vdmde8
 
-# Unsure what to use for Raven's progressive matrices
+# vdmde8 is NOT a direct match to Jones et al.
 
-cognition_17 <- ADAMS1AN_R %>% 
-  dplyr::select(ADAMSSID, ANTMBSEC) %>% # Trails Btime to complete (0-727)
-  dplyr::mutate(ANTMBSEC = na_if(ANTMBSEC, 995),  # mark 995-997 as missing
-                ANTMBSEC = na_if(ANTMBSEC, 996),
-                ANTMBSEC = na_if(ANTMBSEC, 997),
-                vdefx2 = ANTMBSEC) %>% 
-  dplyr::select(ADAMSSID, vdefx2)
+vdmde6 <- ModelVars %>% 
+  dplyr::select(ADAMSSID, ANWM2A) %>% 
+  dplyr::rename(vdmde6 = ANWM2A) # rename AMWM2A to vdmde6
 
-# Unsure what to use for vdexf3 - vdexf4
+# vdmde6 is NOT in Jones et al.
 
-cognition_20 <- ADAMS1AN_R %>% 
-  dplyr::select(ADAMSSID, ANSDMERR) %>% # Symbol digit modality - total errors (0-12)
-  dplyr::mutate(ANSDMERR = na_if(ANSDMERR, 97),  # mark 97 as missing
-                vdexf5 = ANSDMERR) %>% 
-  dplyr::select(ADAMSSID, vdexf5)
+vdmde7<- ModelVars %>% 
+  dplyr::select(ADAMSSID, ANWM2B) %>% 
+  dplyr::rename(vdmde7 = ANWM2B) # rename AMWM2B to vdmde7
+
+# vdmde7 is NOT in Jones et al.
+
+memory <- vdmre1 %>% 
+  left_join(vdmie2, by = "ADAMSSID") %>% 
+  left_join(vdmde4, by = "ADAMSSID") %>% 
+  left_join(vdmde8, by = "ADAMSSID") %>% 
+  left_join(vdmde6, by = "ADAMSSID") %>% 
+  left_join(vdmde7, by = "ADAMSSID")
+
+####
+## EXECUTIVE FUNCTIONING
+####
+
+vdefx2 <- ModelVars %>% 
+  dplyr::select(ADAMSSID, ANTMBSEC) %>% 
+  dplyr::mutate(vdefx2 = 1 - (log(ANTMBSEC)/log(300))) %>%  # follow Jones et al. scoring convention to obtain vdefx2
+  dplyr::select(-ANTMBSEC)
+
+# vdefx2 is a match to Jones et al.
+
+vdasp1 <- ModelVars %>% 
+  dplyr::select(ADAMSSID, ANSDMTOT) %>% 
+  dplyr::rename(vdasp1 = ANSDMTOT) # rename ANSDMTOT to vdasp1
+
+# vdasp1 is a match to Jones et al.
+
+vdasp2 <- ModelVars %>% 
+  dplyr::select(ADAMSSID, ANTMASEC) %>% 
+  dplyr::mutate(vdasp2 = 1 - (log(ANTMASEC)/log(300))) %>%  # follow Jones et al. scoring convention to obtain vdasp2
+  dplyr::select(-ANTMASEC)
+
+# vdasp2 is a match to Jones et al.
+
+vdasp3 <- ModelVars %>% 
+  dplyr::select(ADAMSSID, ANMSE12) %>% 
+  dplyr::rename(vdasp3 = ANMSE12) # rename ANMSE12 to vdasp3
+
+# vdasp3 is a match to Jones et al.
+
+vdefx8 <- ModelVars %>% 
+  dplyr::select(ADAMSSID, ANDSSBT) %>% 
+  dplyr::rename(vdefx8 = ANDSSBT) # rename ANDSSBT to vdefx3
+
+# vdefx8 is NOT in Jones et al.
+
+vdefx9 <- ModelVars %>% 
+  dplyr::select(ADAMSSID, ANDSSFT) %>% 
+  dplyr::rename(vdefx9 = ANDSSFT) # rename ANDSSFT to vdefx4
+
+# vdefx9 is NOT in Jones et al.
 
 
-# Unsure what to use for vdexf6 - vdexf7
+execfunc <- vdefx2 %>% 
+  left_join(vdasp1, by = "ADAMSSID") %>% 
+  left_join(vdasp2, by = "ADAMSSID") %>% 
+  left_join(vdasp3, by = "ADAMSSID") %>% 
+  left_join(vdefx8, by = "ADAMSSID") %>% 
+  left_join(vdefx9, by = "ADAMSSID")
 
-## ATTENTION/SPEED
+####
+## LANGUAGE FLUENCY
+####
 
-cognition_23 <- ADAMS1AN_R %>% 
-  dplyr::select(ADAMSSID, ANSDMTOT) %>% # Symbol digit modality - total score (0-63)
-  dplyr::mutate(ANSDMTOT = na_if(ANSDMTOT, 97),  # mark 97 as missing
-                vdasp1 = ANSDMTOT) %>% 
-  dplyr::select(ADAMSSID, vdasp1)
+vdlfl1 <- ModelVars %>% 
+  dplyr::select(ADAMSSID, ANAFTOT) %>% 
+  dplyr::rename(vdlfl1 = ANAFTOT) # rename ANAFTOT to vdlfl1
 
-cognition_24 <- ADAMS1AN_R %>% 
-  dplyr::select(ADAMSSID, ANTMASEC) %>% # Trails A - time to complete (0-373)
-  dplyr::mutate(ANTMASEC = na_if(ANTMASEC, 995),  # mark 995-997 as missing
-                ANTMASEC = na_if(ANTMASEC, 995),
-                ANTMASEC = na_if(ANTMASEC, 997),
-                vdasp2 = ANTMASEC) %>% 
-  dplyr::select(ADAMSSID, vdasp2)
+# vdlfl1 is a match to Jones et al.
 
-cognition_25 <- ADAMS1AN_R %>% 
-  dplyr::select(ADAMSSID, ANMSE12) %>% # MMSE Item 12 (0-5)
-  dplyr::mutate(ANMSE12 = na_if(ANMSE12, 97),  # mark 97 as missing
-                vdasp3 = ANMSE12) %>% 
-  dplyr::select(ADAMSSID, vdasp3)
-
-# Unsure what to use for vdasp4 -- could use TICS backwards 20 or 86
-
-# Unsure what to use for vdasp5 
-
-## LANGUAGE/FLUENCY
-
-cognition_28 <- ADAMS1AN_R %>% 
-  dplyr::select(ADAMSSID, ANAFTOT) %>%  # Animal Fluency total score (0-33)
-  dplyr::mutate(ANAFTOT = na_if(ANAFTOT, 97),  # mark 97 as missing
-                vdlfl1 = ANAFTOT) %>% 
-  dplyr::select(ADAMSSID, vdlfl1)
-
-cognition_29 <- ADAMS1AN_R %>% 
+vdlfl2 <- ModelVars %>% 
   dplyr::select(ADAMSSID, ANSCISOR, ANCACTUS) %>%  # TICS name scissors, cactus (0-1)
-  dplyr::rowwise() %>% 
-  dplyr::mutate(across(c(ANSCISOR:ANCACTUS), na_if, 97), # mark 97-99 as missing
-                across(c(ANSCISOR:ANCACTUS), na_if, 98),
-                across(c(ANSCISOR:ANCACTUS), na_if, 99),
-                vdlfl2 = sum(c_across(ANSCISOR:ANCACTUS))) %>% 
+  dplyr::mutate(vdlfl2 = ANSCISOR + ANCACTUS) %>% # sum across to get vdlfl2
   dplyr::select(ADAMSSID, vdlfl2)
 
-cognition_30 <- ADAMS1AN_R %>% 
-  dplyr::select(ADAMSSID, ANMSE14, ANMSE15) %>%  # MMSE items 14 and 15 (0-1)
-  dplyr::rowwise() %>% 
-  dplyr::mutate(across(c(ANMSE14:ANMSE15), na_if, 97), # mark 97 as missing
-                vdlfl3 = sum(c_across(ANMSE14:ANMSE15))) %>% 
+# vdlfl2 is a match to Jones et al.
+
+vdlfl3 <- ModelVars %>% 
+  dplyr::select(ADAMSSID, ANMSE16_R, ANMSE17_R) %>% 
+  dplyr::mutate(vdlfl3 = ANMSE16_R + ANMSE17_R) %>% # sum across to get vdlfl3
   dplyr::select(ADAMSSID, vdlfl3)
 
-cognition_31 <- ADAMS1AN_R %>% 
-  dplyr::select(ADAMSSID, ANMSE21) %>%  # MMSE item 21 (0-1)
-  dplyr::mutate(ANMSE21 = na_if(ANMSE21, 97), # mark 97 as missing
-                ANMSE21 = dplyr::case_when(ANMSE21 == 0 ~ 0,
-                                           ANMSE21 == 1 ~ 1,
-                                           ANMSE21 == 2 ~ 1), # recode so 2 (correct, wrote name) is marked as correct 
-                vdlfl4 = ANMSE21) %>% 
-  dplyr::select(ADAMSSID, vdlfl4)
+# vdlfl3 is a match to Jones et al.
 
-cognition_32 <- ADAMS1AN_R %>% 
+vdlfl4 <- ModelVars %>% 
+  dplyr::select(ADAMSSID, ANMSE21_R) %>% 
+  dplyr::rename(vdlfl4 = ANMSE21_R) # rename
+
+# vdlfl4 is a match to Jones et al.
+
+vdlfl5 <- ModelVars %>% 
   dplyr::select(ADAMSSID, ANMSE20F, ANMSE20L, ANMSE20R) %>%  # MMSE paper folds all (0-1)
-  dplyr::rowwise() %>% 
-  dplyr::mutate(across(c(ANMSE20F, ANMSE20L, ANMSE20R), na_if, 97), # mark 97 as missing
-                vdlfl5 = sum(c_across(ANMSE20F:ANMSE20R))) %>% 
+  dplyr::mutate(vdlfl5p1 = ANMSE20F + ANMSE20L + ANMSE20R,
+                vdlfl5 = dplyr::if_else(vdlfl5p1 == 3, 1, 0)) %>% # rescore so 3 = 1, otherwise 0 to get vdlfl5
   dplyr::select(ADAMSSID, vdlfl5)
 
-cognition_33 <- ADAMS1AN_R %>% 
-  dplyr::select(ADAMSSID, ANMSE17) %>%  # MMSE item 17 (0-1)
-  dplyr::mutate(ANMSE17 = na_if(ANMSE17, 97), # mark 97 as missing
-                ANMSE17 = dplyr::case_when(ANMSE17 == 0 ~ 0,
-                                           ANMSE17 == 1 ~ 1,
-                                           ANMSE17 == 2 ~ 1), # recode so 2 (correct, tactile stimuli) is marked as correct 
-                vdlfl6 = ANMSE17) %>% 
-  dplyr::select(ADAMSSID, vdlfl6)
+# vdlfl5 is a match to Jones et al.
 
-# Unsure what to use for vdlfl7
+vdlfl7 <- ModelVars %>% 
+  dplyr::select(ADAMSSID, ANBNTTOT) %>% 
+  dplyr::rename(vdlfl7 = ANBNTTOT) # rename
 
-# Possible typo in github -- two versions of vdlfl5 and vdlfl6. intentional write-over?
+# vdlfl5 is NOT in Jones et al.
 
-## MERGE COGNITION DATA
+vdlfl8 <- ModelVars %>% 
+  dplyr::select(ADAMSSID, ANCOWATO) %>% 
+  dplyr::rename(vdlfl8 = ANCOWATO) #rename
+
+# vdlfl5 is NOT in Jones et al.
+
+language <- vdlfl1 %>% 
+  left_join(vdlfl2, by = "ADAMSSID") %>% 
+  left_join(vdlfl3, by = "ADAMSSID") %>% 
+  left_join(vdlfl4, by = "ADAMSSID") %>% 
+  left_join(vdlfl5, by = "ADAMSSID") %>% 
+  left_join(vdlfl7, by = "ADAMSSID") %>% 
+  left_join(vdlfl8, by = "ADAMSSID")
+
+####
+## VISUOSPATIAL
+####
+
+vdvis1 <- ModelVars %>% 
+  dplyr::select(ADAMSSID, ANCPTOT) %>% 
+  dplyr::rename(vdvis1 = ANCPTOT)
+
+####
+## MERGE ALL
+####
+
+cognition_scored <- vdori1 %>% 
+  left_join(memory, by = "ADAMSSID") %>% 
+  left_join(execfunc, by = "ADAMSSID") %>% 
+  left_join(language, by = "ADAMSSID") %>% 
+  left_join(vdvis1, by = "ADAMSSID") %>% 
+  ungroup() %>% 
+  labelled::remove_labels()
+
+## label data
+
+labelled::var_label(cognition_scored) <- list(
+  vdori1 = "MMSE 10 items (number of correct 0-10)",
+  vdmre1 = "CERAD word list recognition task (0-20)",
+  vdmie2 = "MMSE 3 word recognition (0-3)",
+  vdmde4 = "CERAD word list delayed (0-10)",
+  vdmde8 = "CERAD constructional praxis delayed (0-4)",
+  vdmde6 = "Logical memory delayed A",
+  vdmde7 = "Logical memory delayed B",
+  vdefx2 = "Trails B time (observed 32-300 seconds)",
+  vdasp1 = "Symbol Digit Modalities Test score",
+  vdasp2 = "Trails A",
+  vdasp3 = "MMSE spell world backwards",
+  vdefx8 = "Digit span backwards",
+  vdefx9 = "Digit span forwards", 
+  vdlfl1 = "Category fluency (animals)",
+  vdlfl2 = "Naming 2 items HRS TICS scissors cactus",
+  vdlfl3 = "Naming 2 items MMSE",
+  vdlfl4 = "MMSE write a sentence",
+  vdlfl5 = "MMSE read and follow command",
+  vdlfl7 = "Boston naming test",
+  vdlfl8 = "Controlled oral word association",
+  vdvis1 = "CERAD constructional praxis")
+
+# Make table to review
+
+cognition_scored %>%
+  dplyr::select(-ADAMSSID) %>%
+  gtsummary::tbl_summary(
+    statistic = list(
+      c(vdori1, 
+        vdmre1, vdmde4, vdmde6, vdmde7,
+        vdefx2, vdasp1, vdasp2, vdefx8, vdefx9,
+        vdlfl1, vdlfl7, vdlfl8, 
+        vdvis1) ~ "{mean} ({sd})")) %>%
+  gtsummary::as_gt() %>%
+  gt::gtsave("HCAP-ADAMS-MODELVARS-SCORED.rtf")
