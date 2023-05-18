@@ -36,9 +36,7 @@ ModelVars <- ADAMS1AN_R %>%
                 ANMSE16, # name two objects (MMSE)
                 ANMSE17,
                 ANMSE21, # write a sentence
-                ANMSE20F, # read and follow command
-                ANMSE20L,
-                ANMSE20R,
+                ANMSE19, # read and follow command
                 ANBNTTOT, # boston naming test
                 ANCOWATO, # controlled oral word assoc.
                 # Visuospatial items
@@ -54,7 +52,7 @@ ModelVars <- ADAMS1AN_R %>%
                                              ANMSE21 == 1 ~ 1,
                                              ANMSE21 == 0 ~ 0)) %>% 
   dplyr::select(-ANMSE16, -ANMSE17, -ANMSE21) %>% 
-  dplyr::mutate(across(c(ANMSE1:ANMSE15, ANMSE12, ANMSE20F, ANMSE20R, ANMSE20L,
+  dplyr::mutate(across(c(ANMSE1:ANMSE15, ANMSE12, ANMSE19,
                          ANSCISOR, ANCACTUS, ANRECYES, ANRECNO, ANWM2A,
                          ANWM2B, ANDCPTOT, ANRCPTOT, ANDSSBT,
                          ANDSSFT, ANSDMTOT, ANAFTOT,
@@ -104,13 +102,17 @@ vdmre1 <- ModelVars %>%
 
 # vdmre1 is a direct match to Jones et al.
 
-vdmie2 <- ModelVars %>% 
+vdmde3 <- ModelVars %>% 
   dplyr::select(ADAMSSID, ANMSE13:ANMSE15) %>% 
   dplyr::rowwise() %>%
-  dplyr::mutate(vdmie2 = sum(c_across(ANMSE13:ANMSE15))) %>%  # create vdmie2 by summing
-  dplyr::select(ADAMSSID, vdmie2)
+  dplyr::mutate(mmse_delay_sum = sum(c_across(ANMSE13:ANMSE15)),
+                vdmde3 = dplyr::case_when(mmse_delay_sum == 3 ~ 2,
+                                          mmse_delay_sum == 2 ~ 1,
+                                          mmse_delay_sum == 1 ~ 0,
+                                          mmse_delay_sum == 0 ~ 0)) %>%  # create vdmde3
+  dplyr::select(ADAMSSID, vdmde3)
 
-# vdmie2 is a direct match to Jones et al.
+# vdmde3 is a direct match to Jones et al.
 
 vdmde4 <- ModelVars %>% 
   dplyr::select(ADAMSSID, ANDCPTOT) %>% 
@@ -137,7 +139,7 @@ vdmde7<- ModelVars %>%
 # vdmde7 is NOT in Jones et al.
 
 memory <- vdmre1 %>% 
-  left_join(vdmie2, by = "ADAMSSID") %>% 
+  left_join(vdmde3, by = "ADAMSSID") %>% 
   left_join(vdmde4, by = "ADAMSSID") %>% 
   left_join(vdmde8, by = "ADAMSSID") %>% 
   left_join(vdmde6, by = "ADAMSSID") %>% 
@@ -205,14 +207,16 @@ vdlfl1 <- ModelVars %>%
 
 vdlfl2 <- ModelVars %>% 
   dplyr::select(ADAMSSID, ANSCISOR, ANCACTUS) %>%  # TICS name scissors, cactus (0-1)
-  dplyr::mutate(vdlfl2 = ANSCISOR + ANCACTUS) %>% # sum across to get vdlfl2
+  dplyr::mutate(tics_sum = ANSCISOR + ANCACTUS,
+                vdlfl2 = dplyr::if_else(tics_sum == 2, 1, 0)) %>% # get vdlfl2 
   dplyr::select(ADAMSSID, vdlfl2)
 
 # vdlfl2 is a match to Jones et al.
 
 vdlfl3 <- ModelVars %>% 
   dplyr::select(ADAMSSID, ANMSE16_R, ANMSE17_R) %>% 
-  dplyr::mutate(vdlfl3 = ANMSE16_R + ANMSE17_R) %>% # sum across to get vdlfl3
+  dplyr::mutate(mmse_sum = ANMSE16_R + ANMSE17_R,
+                vdlfl3 = dplyr::if_else(mmse_sum == 2, 1, 0)) %>% #  get vdlfl3
   dplyr::select(ADAMSSID, vdlfl3)
 
 # vdlfl3 is a match to Jones et al.
@@ -224,9 +228,8 @@ vdlfl4 <- ModelVars %>%
 # vdlfl4 is a match to Jones et al.
 
 vdlfl5 <- ModelVars %>% 
-  dplyr::select(ADAMSSID, ANMSE20F, ANMSE20L, ANMSE20R) %>%  # MMSE paper folds all (0-1)
-  dplyr::mutate(vdlfl5p1 = ANMSE20F + ANMSE20L + ANMSE20R,
-                vdlfl5 = dplyr::if_else(vdlfl5p1 == 3, 1, 0)) %>% # rescore so 3 = 1, otherwise 0 to get vdlfl5
+  dplyr::select(ADAMSSID, ANMSE19) %>%  # MMSE read and follow command
+  dplyr::mutate(vdlfl5 = dplyr::if_else(ANMSE19 > 0, 1, 0)) %>% # rescore so > 0 (i.e., 1 or 2)  == 1, otherwise 0 to get vdlfl5
   dplyr::select(ADAMSSID, vdlfl5)
 
 # vdlfl5 is a match to Jones et al.
@@ -276,7 +279,7 @@ cognition_scored <- vdori1 %>%
 labelled::var_label(cognition_scored) <- list(
   vdori1 = "MMSE 10 items (number of correct 0-10)",
   vdmre1 = "CERAD word list recognition task (0-20)",
-  vdmie2 = "MMSE 3 word recognition (0-3)",
+  vdmde3 = "MMSE 3 word delayed recall (0-3)",
   vdmde4 = "CERAD word list delayed (0-10)",
   vdmde8 = "CERAD constructional praxis delayed (0-4)",
   vdmde6 = "Logical memory delayed A",
@@ -308,4 +311,4 @@ cognition_scored %>%
         vdlfl1, vdlfl7, vdlfl8, 
         vdvis1) ~ "{mean} ({sd})")) %>%
   gtsummary::as_gt() %>%
-  gt::gtsave("HCAP-ADAMS-MODELVARS-SCORED.rtf")
+  gt::gtsave("HCAP-ADAMS-MODELVARS-SCORED-update2023-05-18.rtf")
