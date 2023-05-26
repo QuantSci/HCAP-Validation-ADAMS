@@ -151,8 +151,10 @@ memory <- vdmre1 %>%
 
 vdefx2 <- ModelVars %>% 
   dplyr::select(ADAMSSID, ANTMBSEC) %>% 
-  dplyr::mutate(vdefx2 = 1 - (log(ANTMBSEC)/log(300))) %>%  # follow Jones et al. scoring convention to obtain vdefx2
-  dplyr::select(-ANTMBSEC)
+  dplyr::mutate(
+    trailsb_recode = dplyr::if_else(ANTMBSEC > 300, 300, ANTMBSEC),
+    vdefx2 = 1 - (log(trailsb_recode)/log(300))) %>%  # follow Jones et al. scoring convention to obtain vdefx2
+  dplyr::select(-ANTMBSEC, -trailsb_recode)
 
 # vdefx2 is a match to Jones et al.
 
@@ -164,8 +166,10 @@ vdasp1 <- ModelVars %>%
 
 vdasp2 <- ModelVars %>% 
   dplyr::select(ADAMSSID, ANTMASEC) %>% 
-  dplyr::mutate(vdasp2 = 1 - (log(ANTMASEC)/log(300))) %>%  # follow Jones et al. scoring convention to obtain vdasp2
-  dplyr::select(-ANTMASEC)
+  dplyr::mutate(
+    trailsa_recode = dplyr::if_else(ANTMASEC > 300, 300, ANTMASEC),
+    vdasp2 = 1 - (log(trailsa_recode)/log(300))) %>%  # follow Jones et al. scoring convention to obtain vdasp2
+  dplyr::select(-ANTMASEC, -trailsa_recode)
 
 # vdasp2 is a match to Jones et al.
 
@@ -312,3 +316,17 @@ cognition_scored %>%
         vdvis1) ~ "{mean} ({sd})")) %>%
   gtsummary::as_gt() %>%
   gt::gtsave("HCAP-ADAMS-MODELVARS-SCORED-update2023-05-18.rtf")
+
+###
+## prep for analysis
+###
+
+# add in weights
+
+get_weights <- ADAMS1TRK_R %>% 
+  select(ADAMSSID, SECLUST, AASAMPWT_F, SESTRAT)
+
+analysis_data <- left_join(cognition_scored, get_weights, by = "ADAMSSID")
+
+saveRDS(cognition_scored, here::here(RDS_path, "020_cognition-scored.rds"))
+saveRDS(analysis_data, here::here(RDS_path, "020_analysis_data.rds"))
