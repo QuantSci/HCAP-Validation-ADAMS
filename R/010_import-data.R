@@ -33,3 +33,12 @@ saveRDS(HRS_2002, here::here(RDS_path, "010_HRS_2002.RDS"))
 saveRDS(HRS_2004, here::here(RDS_path, "010_HRS_2004.RDS"))
 saveRDS(HRS_2006, here::here(RDS_path, "010_HRS_2006.RDS"))
 saveRDS(HRS_TRK, here::here(RDS_path, "010_HRS_TRK.RDS"))
+
+
+
+cog_long <- UMNDataset_0606203 %>% 
+  dplyr::select(sub_id, CompositeAttentionHughes, CompositeLanguageHughes, CompositeMemoryHughes, CompositeVisuospatialHughes,
+                CompositeExecutiveHughes) %>% 
+  tidyr::pivot_longer(names_to = "test", values_to = "cognition") %>% 
+  group_by(sub_id) %>% 
+  dplyr::summarize(iSD = sd(cognition, na.rm = T))

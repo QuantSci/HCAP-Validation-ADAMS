@@ -15,30 +15,32 @@ ModelVars <- ADAMS1AN_R %>%
                 # Orientation items
                 ANMSE1:ANMSE10, # Orientation
                 # Memory items
-                ANRECYES, # 10-word delayed recall (CERAD)
-                ANRECNO,
-                ANMSE13:ANMSE15, # 3-word delayed recall (sum for analysis)
-                ANWM2A, # Logical memory delayed A
-                ANWM2B, # Logical memory delayed B
-                ANDCPTOT, # Const. Praxis delayed
-                ANRCPTOT, #10-word delayed recog
+                ANDELCOR, # DEL WORD LIST MEM TOTAL CORRECT -- Analysis Name vdmde1
+                ANMSE13:ANMSE15, # 3-word delayed recall (sum for analysis) -- analysis name vdmde3
+                ANWM2A, # Logical memory delayed A -- analysis name vdmde2
+                ANWM2B, # Logical memory delayed B -- analayis name vdmde?
+                ANDCPTOT, # DELAYED CONSTRUCTIONAL PRAXIS TOTAL -- analysis name vdmde4
+                ANRECYES, # WORD LIST RECOG - TOTAL CORRECT YES -- analysis name vdmre1 (sum w/ no for analysis)
+                ANRECNO, # WORD LIST RECOG - TOTAL CORRECT NO
+               
                 # Exec. Func items
-                ANTMASEC, # trails A
-                ANTMBSEC, # trails B
-                ANMSE12, # backwards spelling
-                ANDSSBT, # digit span backwards
-                ANDSSFT, # digit span forwards
-                ANSDMTOT, # symbol digit modality
+                ANTMBSEC, # trails B -- vdefx2
+                ANDSSBT, # digit span backwards -- vdefx8
+                ANDSSFT, # digit span forwards -- vdefx9
+                ANTMASEC, # trails A -- vdasp2
+                ANSDMTOT, # symbol digit modality -- vdasp1
+                ANMSE12, # backwards spelling -- vdasp3
+                
                 # Language/Fluency items
-                ANAFTOT, # Animal naming
-                ANSCISOR, # name two objects (TICS)
+                ANAFTOT, # Animal naming  -- vdlfl1
+                ANSCISOR, # name two objects (TICS) -- vdlfl2
                 ANCACTUS,
-                ANMSE16, # name two objects (MMSE)
+                ANMSE16, # name two objects (MMSE) -- vdlfl3
                 ANMSE17,
-                ANMSE21, # write a sentence
-                ANMSE19, # read and follow command
-                ANBNTTOT, # boston naming test
-                ANCOWATO, # controlled oral word assoc.
+                ANMSE21, # write a sentence -- vdlfl4
+                ANMSE19, # read and follow command -- vdlfl5
+                ANBNTTOT, # boston naming test -- vdlfl7
+                ANCOWATO, # controlled oral word assoc. -- vdlfl8
                 # Visuospatial items
                 ANCPTOT
                 ) %>% 
@@ -54,7 +56,7 @@ ModelVars <- ADAMS1AN_R %>%
   dplyr::select(-ANMSE16, -ANMSE17, -ANMSE21) %>% 
   dplyr::mutate(across(c(ANMSE1:ANMSE15, ANMSE12, ANMSE19,
                          ANSCISOR, ANCACTUS, ANRECYES, ANRECNO, ANWM2A,
-                         ANWM2B, ANDCPTOT, ANRCPTOT, ANDSSBT,
+                         ANWM2B, ANDCPTOT, ANDELCOR, ANDSSBT,
                          ANDSSFT, ANSDMTOT, ANAFTOT,
                          ANBNTTOT, ANCOWATO, ANCPTOT), na_if, 97), # mark 97s as missing
                 across(c(ANSCISOR, ANCACTUS), na_if, 98), # mark 98s as missing
@@ -65,14 +67,14 @@ ModelVars <- ADAMS1AN_R %>%
 
 ## Examine raw variables
 
-ModelVars %>%
-  dplyr::select(-ADAMSSID) %>%
-  gtsummary::tbl_summary(
-    statistic = list(
-    c(ANRECYES, ANRECNO, ANWM2A, ANWM2B, ANDCPTOT, ANTMBSEC, ANTMASEC,
-      ANDSSBT, ANDSSFT, ANSDMTOT, ANAFTOT, ANBNTTOT, ANCOWATO, ANCPTOT) ~ "{mean} ({sd})")) %>%
-  gtsummary::as_gt() %>%
-  gt::gtsave("HCAP-ADAMS-MODELVARS.rtf")
+# ModelVars %>%
+#   dplyr::select(-ADAMSSID) %>%
+#   gtsummary::tbl_summary(
+#     statistic = list(
+#     c(ANRECYES, ANRECNO, ANWM2A, ANWM2B, ANDCPTOT, ANTMBSEC, ANTMASEC,
+#       ANDSSBT, ANDSSFT, ANSDMTOT, ANAFTOT, ANBNTTOT, ANCOWATO, ANCPTOT) ~ "{mean} ({sd})")) %>%
+#   gtsummary::as_gt() %>%
+#   gt::gtsave("HCAP-ADAMS-MODELVARS.rtf")
 
 
 ## Make variables to be used in analaysis
@@ -120,11 +122,11 @@ vdmde4 <- ModelVars %>%
 
 # vdmre1 is a direct match to Jones et al.
 
-vdmde8 <- ModelVars %>% 
-  dplyr::select(ADAMSSID, ANRCPTOT) %>% 
-  dplyr::rename(vdmde8 = ANRCPTOT) # rename ANRCPTOT to vdmde8
+vdmde1 <- ModelVars %>% 
+  dplyr::select(ADAMSSID, ANDELCOR) %>% 
+  dplyr::rename(vdmde1 = ANDELCOR) # rename ANDELCOR to vdmde1
 
-# vdmde8 is NOT a direct match to Jones et al.
+# vdmde1 is a direct match to Jones et al.
 
 vdmde6 <- ModelVars %>% 
   dplyr::select(ADAMSSID, ANWM2A) %>% 
@@ -141,7 +143,7 @@ vdmde7<- ModelVars %>%
 memory <- vdmre1 %>% 
   left_join(vdmde3, by = "ADAMSSID") %>% 
   left_join(vdmde4, by = "ADAMSSID") %>% 
-  left_join(vdmde8, by = "ADAMSSID") %>% 
+  left_join(vdmde1, by = "ADAMSSID") %>% 
   left_join(vdmde6, by = "ADAMSSID") %>% 
   left_join(vdmde7, by = "ADAMSSID")
 
@@ -242,13 +244,13 @@ vdlfl7 <- ModelVars %>%
   dplyr::select(ADAMSSID, ANBNTTOT) %>% 
   dplyr::rename(vdlfl7 = ANBNTTOT) # rename
 
-# vdlfl5 is NOT in Jones et al.
+# vdlfl7 is NOT in Jones et al.
 
 vdlfl8 <- ModelVars %>% 
   dplyr::select(ADAMSSID, ANCOWATO) %>% 
   dplyr::rename(vdlfl8 = ANCOWATO) #rename
 
-# vdlfl5 is NOT in Jones et al.
+# vdlfl8 is NOT in Jones et al.
 
 language <- vdlfl1 %>% 
   left_join(vdlfl2, by = "ADAMSSID") %>% 
@@ -278,44 +280,83 @@ cognition_scored <- vdori1 %>%
   ungroup() %>% 
   labelled::remove_labels()
 
+####
+## MIN-MAX NORMALIZATION
+####
+
+minmax <- function(x){
+  
+  c_n <- (5 / (8*1000)) * sd(x, na.rm = T)
+  c_d <- (10/ (8*1000)) * sd(x, na.rm = T)
+  
+  (x - min(x, na.rm = T) + c_n) / (max(x, na.rm = T) - min(x, na.rm = T) + c_d)
+  
+}
+
+minmax(cognition_scored$vdmre1)
+
+
+cognition_normalized <- cognition_scored %>% 
+  dplyr::mutate(vdmre1z = minmax(vdmre1),
+                vdmde4z = minmax(vdmde4),
+                vdmde6z = minmax(vdmde6),
+                vdmde7z = minmax(vdmde7),
+                vdasp1z = minmax(vdasp1),
+                vdefx8z = minmax(vdefx8),
+                vdefx9z = minmax(vdefx9),
+                vdlfl1z = minmax(vdlfl1),
+                vdlfl7z = minmax(vdlfl7),
+                vdlfl8z = minmax(vdlfl8),
+                vdvis1z = minmax(vdvis1)) %>% 
+  dplyr::select(-vdmre1,
+                -vdmde4,
+                -vdmde6,
+                -vdmde7,
+                -vdasp1,
+                -vdefx8,
+                -vdefx9,
+                -vdlfl1,
+                -vdlfl7,
+                -vdlfl8,
+                -vdvis1)
+
 ## label data
 
-labelled::var_label(cognition_scored) <- list(
+labelled::var_label(cognition_normalized) <- list(
   vdori1 = "MMSE 10 items (number of correct 0-10)",
-  vdmre1 = "CERAD word list recognition task (0-20)",
+  vdmre1z = "CERAD word list recognition task (0-20)",
   vdmde3 = "MMSE 3 word delayed recall (0-3)",
-  vdmde4 = "CERAD word list delayed (0-10)",
-  vdmde8 = "CERAD constructional praxis delayed (0-4)",
-  vdmde6 = "Logical memory delayed A",
-  vdmde7 = "Logical memory delayed B",
+  vdmde4z = "CERAD word list delayed (0-10)",
+  vdmde1 = "10 word delayed recall (0-10)",
+  vdmde6z = "Logical memory delayed A",
+  vdmde7z = "Logical memory delayed B",
   vdefx2 = "Trails B time (observed 32-300 seconds)",
-  vdasp1 = "Symbol Digit Modalities Test score",
+  vdasp1z = "Symbol Digit Modalities Test score",
   vdasp2 = "Trails A",
   vdasp3 = "MMSE spell world backwards",
-  vdefx8 = "Digit span backwards",
-  vdefx9 = "Digit span forwards", 
-  vdlfl1 = "Category fluency (animals)",
+  vdefx8z = "Digit span backwards",
+  vdefx9z = "Digit span forwards", 
+  vdlfl1z = "Category fluency (animals)",
   vdlfl2 = "Naming 2 items HRS TICS scissors cactus",
   vdlfl3 = "Naming 2 items MMSE",
   vdlfl4 = "MMSE write a sentence",
   vdlfl5 = "MMSE read and follow command",
-  vdlfl7 = "Boston naming test",
-  vdlfl8 = "Controlled oral word association",
-  vdvis1 = "CERAD constructional praxis")
+  vdlfl7z = "Boston naming test",
+  vdlfl8z = "Controlled oral word association",
+  vdvis1z = "CERAD constructional praxis")
 
 # Make table to review
-
-cognition_scored %>%
+# 
+cognition_normalized %>%
   dplyr::select(-ADAMSSID) %>%
   gtsummary::tbl_summary(
     statistic = list(
-      c(vdori1, 
-        vdmre1, vdmde4, vdmde6, vdmde7,
-        vdefx2, vdasp1, vdasp2, vdefx8, vdefx9,
-        vdlfl1, vdlfl7, vdlfl8, 
-        vdvis1) ~ "{mean} ({sd})")) %>%
+      c(vdmre1z, vdmde4z, vdmde6z, vdmde7z,
+        vdasp1z, vdefx8z, vdefx9z,
+        vdlfl1z, vdlfl7z, vdlfl8z,
+        vdvis1z) ~ "{mean} ({sd})")) %>%
   gtsummary::as_gt() %>%
-  gt::gtsave("HCAP-ADAMS-MODELVARS-SCORED-update2023-05-18.rtf")
+  gt::gtsave("HCAP-ADAMS-MODELVARS-SCORED-update2023-11-16.rtf")
 
 ###
 ## prep for analysis
@@ -326,7 +367,7 @@ cognition_scored %>%
 get_weights <- ADAMS1TRK_R %>% 
   select(ADAMSSID, SECLUST, AASAMPWT_F, SESTRAT)
 
-analysis_data <- left_join(cognition_scored, get_weights, by = "ADAMSSID")
+analysis_data <- left_join(cognition_normalized, get_weights, by = "ADAMSSID")
 
-saveRDS(cognition_scored, here::here(RDS_path, "020_cognition-scored.rds"))
+saveRDS(cognition_normalized, here::here(RDS_path, "020_cognition-normalized.rds"))
 saveRDS(analysis_data, here::here(RDS_path, "020_analysis_data.rds"))
